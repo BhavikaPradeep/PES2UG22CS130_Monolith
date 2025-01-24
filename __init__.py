@@ -1,44 +1,48 @@
-from products import dao
-from typing import List
+import json
+
+import products
+from cart import dao
+from products import Product
 
 
-class Product:
-    def __init__(self, id: int, name: str, description: str, cost: float, qty: int = 0):
+class Cart:
+    def _init_(self, id: int, username: str, contents: list[Product], cost: float):
         self.id = id
-        self.name = name
-        self.description = description
+        self.username = username
+        self.contents = contents
         self.cost = cost
-        self.qty = qty
 
-    @classmethod
-    def load(cls, data):
-        # Accessing data directly from sqlite3.Row using indexing
-        return cls(
-            id=data[0],  # Assuming 'id' is the first column
-            name=data[1],  # Assuming 'name' is the second column
-            description=data[2],  # Assuming 'description' is the third column
-            cost=data[3],  # Assuming 'cost' is the fourth column
-            qty=data[4] if len(data) > 4 else 0  # Assuming 'qty' is optional and may not be present
-        )
+    def load(data):
+        return Cart(data['id'], data['username'], data['contents'], data['cost'])
 
 
-def list_products() -> List[Product]:
-    products = dao.list_products()
-    return [Product.load(product) for product in products]
+def get_cart(username: str) -> list:
+    cart_details = dao.get_cart(username)
+    if cart_details is None:
+        return []
+    
+    items = []
+    for cart_detail in cart_details:
+        contents = cart_detail['contents']
+        evaluated_contents = eval(contents)  
+        for content in evaluated_contents:
+            items.append(content)
+    
+    i2 = []
+    for i in items:
+        temp_product = products.get_product(i)
+        i2.append(temp_product)
+    return i2
+
+    
 
 
-def get_product(product_id: int) -> Product:
-    product_data = dao.get_product(product_id)
-    if product_data is None:
-        raise ValueError(f'Product with ID {product_id} not found.')
-    return Product.load(product_data)
+def add_to_cart(username: str, product_id: int):
+    dao.add_to_cart(username, product_id)
 
 
-def add_product(product: dict):
-    dao.add_product(product)
+def remove_from_cart(username: str, product_id: int):
+    dao.remove_from_cart(username, product_id)
 
-
-def update_qty(product_id: int, qty: int):
-    if qty < 0:
-        raise ValueError('Quantity cannot be negative')
-    dao.update_qty(product_id, qty)
+def delete_cart(username: str):
+    dao.delete_cart(username)
